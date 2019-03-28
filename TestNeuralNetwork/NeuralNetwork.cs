@@ -13,6 +13,11 @@ namespace TestNeuralNetwork
 		// http://www.aiportal.ru/articles/neural-networks/accelerate-training-speed.html
 		// Как вариант, можно добавить параметр "скорость уменьшения параметра скорости обучения"
 
+
+		// TODO
+		// Переработать структуру НС, чтобы у каждого нейрона была информация об ИСХОДЯЩИХ синапсах, а не ВХОДЯЩИХ! 
+		// Такого требует алгоритм https://habr.com/ru/post/313216/
+
 		// Можно переработать процесс остановки обучения НС. Сейчас - это средняя погрешность по всем выходам не больше эпсилон
 		// Можно сделать критерий остановки - каждый выход НС дает погрешность не большую, чем эпсилон
 
@@ -35,7 +40,8 @@ namespace TestNeuralNetwork
 			get
 			{
 				Random r = new Random();
-				return r.NextDouble() / 3.0;
+				//return r.NextDouble() / 3.0;
+				return 0.9;
 			}
 		}
 
@@ -131,6 +137,9 @@ namespace TestNeuralNetwork
 			//}
 		}
 
+
+		// неправильно! Перечитать статью https://habr.com/ru/post/313216/
+		// надо переструктурировать 
 		public void TrainExample (Data data)
 		{		
 			// Распространение ошибки на Второй слой
@@ -138,7 +147,9 @@ namespace TestNeuralNetwork
 			{
 				Neuron currentNeuron = Neurons[2].ElementAt(i);
 
-				currentNeuron.Delta = data.Outputs.ElementAt(i) - currentNeuron.Output;
+				int idealOutput = data.Outputs.ElementAt(i);				
+
+				currentNeuron.Delta = (idealOutput - currentNeuron.Output) * ((1 - currentNeuron.Output) * currentNeuron.Output);
 				foreach (Synaps synaps in currentNeuron.InputSynapses)
 				{
 					ChangeDeltaForSynaps(synaps, currentNeuron.Delta);
@@ -228,7 +239,7 @@ namespace TestNeuralNetwork
 						error += Math.Abs(data.Outputs.ElementAt(i) - currentNeuron.Output);
 					}
 					error /= data.Outputs.Count;
-					Error += error;
+					Error += error * error;
 
 					TrainExample(data);
 
