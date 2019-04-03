@@ -21,9 +21,9 @@ namespace TestNeuralNetwork
 		// Можно переработать процесс остановки обучения НС. Сейчас - это средняя погрешность по всем выходам не больше эпсилон
 		// Можно сделать критерий остановки - каждый выход НС дает погрешность не большую, чем эпсилон
 
-		public readonly double learningSpeed = 0.7;
-		public readonly double alpha = 0.5;
-		public readonly int neuronsCount = 18;
+		public readonly double learningSpeed = 0.3;
+		public readonly double alpha = 0.4;
+		public readonly int neuronsCount = 40;
 
 		public const double Epsilon = 0.002;
 		public const int InputsCount = 2;
@@ -41,7 +41,7 @@ namespace TestNeuralNetwork
 			{
 				Random r = new Random();
 				//return r.NextDouble() / 3.0;
-				return 0.9;
+				return 0.3;
 			}
 		}
 
@@ -129,12 +129,6 @@ namespace TestNeuralNetwork
 					neuron.Output = ActivationFunction(neuron.Output);
 				}
 			}
-
-			//Console.Write("Handle result: ");
-			//foreach (Neuron neuron in Neurons[2])
-			//{
-			//	Console.Write($"{neuron.Output} ");
-			//}
 		}
 
 
@@ -142,92 +136,80 @@ namespace TestNeuralNetwork
 		// надо переструктурировать 
 		public void TrainExample (Data data)
 		{		
-			// Распространение ошибки на Второй слой
+			// Пересчет дельты для выходных нейронов
 			for (int i = 0; i < Neurons[2].Count; i++)
 			{
-				Neuron currentNeuron = Neurons[2].ElementAt(i);
+				Neuron currentNeuron = Neurons[2][i];
 
-				int idealOutput = data.Outputs.ElementAt(i);				
+				int idealOutput = data.Outputs[i];				
 
-				currentNeuron.Delta = (idealOutput - currentNeuron.Output) * ((1 - currentNeuron.Output) * currentNeuron.Output);
-				foreach (Synaps synaps in currentNeuron.InputSynapses)
-				{
-					ChangeDeltaForSynaps(synaps, currentNeuron.Delta);
-
-					// Видимо, вот  здесь нужно добавить тот самый момент при подсчете
-					//double delta = synaps.LastWeightChange * Momentum + learningSpeed * synaps.FirstNeuron.Output * currentNeuron.Delta;
-					//synaps.LastWeightChange = delta;
-					//synaps.Weight += delta;
-					//synaps.Weight = synaps.Weight + LearningSpeed * synaps.FirstNeuron.Output * currentNeuron.Delta;
-				}
+				currentNeuron.Delta = (idealOutput - currentNeuron.Output) * DerivateForActivationFunction(currentNeuron.Output);
 			}
 
-			// распространение ошибки на входной слой
+			// распространение ошибки на скрытый слой
 			for (int i = 0; i < Neurons[1].Count; i++)
 			{
-				Neuron currentNeuron = Neurons[1].ElementAt(i);
+				Neuron currentNeuron = Neurons[1][i];
 				currentNeuron.Delta = 0;
 
+				// Подсчет суммы произведения веса исходящего синапса с нейроном, к которому идет синапс
+				// затем домножение на функцию активации
 				foreach (Synaps outputSynaps in currentNeuron.OutputSynapses)
 				{
 					currentNeuron.Delta += outputSynaps.Weight * outputSynaps.LastNeuron.Delta;
 				}
-				currentNeuron.Delta *= currentNeuron.Output * (1 - currentNeuron.Output);
-
-				foreach (Synaps synaps in currentNeuron.InputSynapses)
+				currentNeuron.Delta *= DerivateForActivationFunction(currentNeuron.Output);
+				
+				// после изменения дельты нейрона мы обязаны пересчитать веса всех выходных синапсов 
+				foreach(Synaps synaps in currentNeuron.OutputSynapses)
 				{
-					// и вот здесь
-					ChangeDeltaForSynaps(synaps, currentNeuron.Delta);
-
-					//double delta = synaps.LastWeightChange * Momentum + learningSpeed * synaps.FirstNeuron.Output * currentNeuron.Delta;
-					//synaps.LastWeightChange = delta;
-					//synaps.Weight += delta;
-					//synaps.Weight += LearningSpeed * synaps.FirstNeuron.Output * currentNeuron.Delta;
-				}
+					ChangeDeltaForSynaps(synaps);
+				}								
 			}
 
-			
+			// распространение ошибки на входной слой
+			for (int i = 0; i < Neurons[0].Count; i++)
+			{
+				Neuron currentNeuron = Neurons[0][i];
+
+				// во входном слое у нейронов нет входных синапсов, поэтому их дельты пересчитывать не надо
+				// Однако нужно пересчитать веса исходящих синапсов
+				foreach (Synaps synaps in currentNeuron.OutputSynapses)
+				{
+					ChangeDeltaForSynaps(synaps);
+				}	
+			}		
 		}
 
-		public void ChangeDeltaForSynaps (Synaps synaps, double currentNeuronDelta)
+		public void ChangeDeltaForSynaps (Synaps synaps)
 		{
-			double delta = synaps.LastWeightChange * Momentum + learningSpeed * synaps.FirstNeuron.Output * currentNeuronDelta;
+			double gradient = synaps.LastNeuron.Delta * synaps.FirstNeuron.Output;
+			double delta = learningSpeed * gradient + synaps.LastWeightChange * Momentum;
 			synaps.LastWeightChange = delta;
 			synaps.Weight += delta;
 		}
 
+		public double DerivateForActivationFunction (double output)
+		{
+			return (1 - output) * output;
+		}
+
 		public void Train (Data[] trainSet)
 		{
-			//double proc = 25.0;
-			//double procMax = 95.0;
-			//int countOfSucessResults = 0;
-			//int stepNumber = 0;
-			//Random r = new Random();
-
-			//while (proc < procMax)
-			//{
-			//	Data currentTraindData = trainSet[r.Next(0, trainSet.Length)];
-			//	Handle(currentTraindData.Inputs);
-			//	stepNumber++;
-			//	for (int i = 0; i < Neurons[2].Count; i++)
-			//	{
-			//		Neuron currentNeuron = Neurons[2].ElementAt(i);
-			//		if (Math.Round(currentNeuron.Output) == currentTraindData.Outputs.ElementAt(i))
-			//		{
-			//			countOfSucessResults++;
-			//		}
-			//	}
-			//	proc = countOfSucessResults * 100 / stepNumber  ;
-			//	Console.WriteLine($"Proc = {proc}");
-			//}
-
 			Error = 1;
 			while (Error > Epsilon)
 			{
 				
-					//ShuffleTrainSet(trainSet);
+				//ShuffleTrainSet(trainSet);
+
+				// обучение сети
+				foreach (Data data in trainSet)
+				{
+					TrainExample(data);
+				}
+								
 				
-									
+				// подсчет ошибки в результате очередного обучения	
 				Error = 0;
 				foreach (Data data in trainSet)
 				{
@@ -235,14 +217,11 @@ namespace TestNeuralNetwork
 					Handle(data.Inputs);
 					for (int i = 0; i < Neurons[2].Count; i++)
 					{
-						Neuron currentNeuron = Neurons[2].ElementAt(i);
-						error += Math.Abs(data.Outputs.ElementAt(i) - currentNeuron.Output);
+						Neuron currentNeuron = Neurons[2][i];
+						error += Math.Abs(data.Outputs[i] - currentNeuron.Output);
 					}
 					error /= data.Outputs.Count;
 					Error += error * error;
-
-					TrainExample(data);
-
 				}
 
 				Error /= trainSet.Length;
