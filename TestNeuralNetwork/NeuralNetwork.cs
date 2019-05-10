@@ -14,18 +14,18 @@ namespace TestNeuralNetwork
 		// Как вариант, можно добавить параметр "скорость уменьшения параметра скорости обучения"
 
 
-		// TODO
-		// Переработать структуру НС, чтобы у каждого нейрона была информация об ИСХОДЯЩИХ синапсах, а не ВХОДЯЩИХ! 
-		// Такого требует алгоритм https://habr.com/ru/post/313216/
+		// алгоритм https://habr.com/ru/post/313216/
 
 		// Можно переработать процесс остановки обучения НС. Сейчас - это средняя погрешность по всем выходам не больше эпсилон
 		// Можно сделать критерий остановки - каждый выход НС дает погрешность не большую, чем эпсилон
 
-		public readonly double learningSpeed = 0.3;
-		public readonly double alpha = 0.4;
-		public readonly int neuronsCount = 40;
+		public readonly double learningSpeed;
+		public readonly double alpha;
+		public readonly int neuronsCount;
+		public readonly int maxEpoch;
 
-		public const double Epsilon = 0.002;
+		public double Epsilon;
+		
 		public const int InputsCount = 2;
 		public const int OutputsCount = 5;
 
@@ -41,7 +41,7 @@ namespace TestNeuralNetwork
 			{
 				Random r = new Random();
 				//return r.NextDouble() / 3.0;
-				return 0.3;
+				return 0.1;
 			}
 		}
 
@@ -49,11 +49,12 @@ namespace TestNeuralNetwork
 		{
 		}
 
-		public NeuralNetwork(double learningSpeed, double alpha, int neuronsCount)
+		public NeuralNetwork(double learningSpeed, double alpha, int neuronsCount, int epoch)
 		{
 			this.learningSpeed = learningSpeed;
 			this.alpha = alpha;
 			this.neuronsCount = neuronsCount;
+			this.maxEpoch = epoch;
 		}
 
 		public void CreateNetwork()
@@ -197,7 +198,9 @@ namespace TestNeuralNetwork
 		public void Train (Data[] trainSet)
 		{
 			Error = 1;
-			while (Error > Epsilon)
+			int counter = 0;
+			//while (Error > Epsilon)
+			while (counter < maxEpoch)
 			{
 				
 				//ShuffleTrainSet(trainSet);
@@ -225,7 +228,8 @@ namespace TestNeuralNetwork
 				}
 
 				Error /= trainSet.Length;
-				Console.WriteLine("Error = {0}", Error);			
+				// Console.WriteLine("Error = {0}", Error);		
+				counter++;	
 			}
 
 		}
